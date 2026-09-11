@@ -21,7 +21,7 @@ A robust, production-ready backend HTTP API for managing digital wallet accounts
    ```bash
    docker compose up -d
    ```
-   *(PostgreSQL 16 Alpine starts on `localhost:5432` with database `wallet_db`, user `wallet_user`, password `wallet_password`)*
+   *(PostgreSQL 16 Alpine container starts locally on `localhost:5432` using default development environment variables from `.env.example`: database `wallet_db`, user `wallet_user`, password `wallet_password`. Production environments load secrets from environment variables)*
 
 3. **Run Database Migrations:**
    ```bash
@@ -152,8 +152,13 @@ All write endpoints (`/credit`, `/debit`, `/transfers`) require an `Idempotency-
 ### What Was Deliberately Left Out & Why:
 - **Distributed Caching / Redis Locking:** PostgreSQL `FOR UPDATE` row locking provides absolute ACID consistency for a single-region database. For ultra-high horizontal scale (>10,000 writes/sec), a distributed lock (e.g., Redlock) or event-sourcing ledger (CQRS) would decouple lock contention from the primary database.
 - **Authentication / API Keys:** Explicitly marked out of scope by assessment guidelines to focus 100% of effort on financial correctness, concurrency, and data modeling.
+- **Swagger / OpenAPI Documentation:** Omitted as explicitly listed out of scope in assessment guidelines to prioritize core transactional correctness, locking, and test coverage.
+- **Currency Conversion / Exchange Rates:** Enforced 1-to-1 matching currencies between accounts (`CURRENCY_MISMATCH` rejection), leaving out FX conversions as specified in guidelines.
 
 ### What I Would Do Differently With Another Week:
-1. **Transient Lock Wait Retries:** Add an automatic application-level retry wrapper (with exponential backoff and jitter) for transient DB lock wait timeouts (`55P03` / `40P01`).
-2. **Key Expiration / Retention Policy:** Implement a background cleanup worker or PostgreSQL TTL policy for `idempotency_keys` (e.g., expiring keys older than 30 days).
-3. **Monotonic Transaction Sequences:** Use database sequence numbers in addition to timestamps to guarantee absolute causal ordering during clock skew across distributed servers.
+1. **Unique Account Identification (Email / Phone Number):** Currently, `POST /accounts` takes `ownerName` and `currency`, allowing duplicate accounts under the same owner name. I would add an `email` or `phone_number` column with unique index constraints (`UNIQUE (email, currency)`) to uniquely identify users and allow one account per currency.
+2. **Idempotency Data Retention & Cleanup Worker:** Over time, the `idempotency_keys` table will accumulate significant data volume. I would implement a scheduled background cleanup worker (or PostgreSQL TTL/partitioning policy) to prune records older than 24–72 hours (e.g., `DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL '30 days'`).
+3. **Transient Lock Wait Retries:** Add an automatic application-level retry wrapper (with exponential backoff and jitter) for transient DB lock wait timeouts (`55P03` / `40P01`).
+4. **Monotonic Transaction Sequences:** Use database sequence numbers in addition to timestamps to guarantee absolute causal ordering during clock skew across distributed servers.
+5. **Structured Audit Logging & Metrics:** Replace basic console logging with structured JSON logging (e.g., Pino) and Prometheus/OpenTelemetry metrics to track lock acquisition latency and API throughput in real-time.
+6. **Event Streaming / Webhooks (Kafka / RabbitMQ):** Publish asynchronous domain events (e.g., `transfer.completed`, `account.credited`) to an event broker for downstream background tasks (email/SMS notifications, analytics, and fraud detection).
