@@ -58,6 +58,7 @@ export class IdempotencyService {
 
   /**
    * Saves the result of an idempotent operation inside the database transaction.
+   * Uses ON CONFLICT DO NOTHING to handle concurrent thundering-herd key insertions safely.
    */
   public static async saveResponse(
     executor: Kysely<Database> | Transaction<Database>,
@@ -78,6 +79,7 @@ export class IdempotencyService {
         status_code: statusCode,
         response_body: JSON.stringify(responseBody),
       })
+      .onConflict((oc) => oc.column('key').doNothing())
       .execute();
   }
 }

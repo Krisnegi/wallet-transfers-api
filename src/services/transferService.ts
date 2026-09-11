@@ -70,7 +70,19 @@ export class TransferService {
     dto: CreditDTO
   ): Promise<ServiceExecutionResult<SingleTransactionResponse>> {
     return await db.transaction().execute(async (trx) => {
-      // 1. Check idempotency replay
+      // 1. Lock account row FOR UPDATE first to serialize concurrent requests for this account
+      const account = await trx
+        .selectFrom('accounts')
+        .selectAll()
+        .where('id', '=', dto.accountId)
+        .forUpdate()
+        .executeTakeFirst();
+
+      if (!account) {
+        throw new NotFoundError(`Account with ID '${dto.accountId}' was not found.`);
+      }
+
+      // 2. Check idempotency replay inside locked account transaction
       const stored = await IdempotencyService.getStoredResponse(
         trx,
         dto.idempotencyKey,
@@ -82,18 +94,6 @@ export class TransferService {
           statusCode: stored.statusCode,
           data: stored.responseBody as SingleTransactionResponse,
         };
-      }
-
-      // 2. Lock account row FOR UPDATE
-      const account = await trx
-        .selectFrom('accounts')
-        .selectAll()
-        .where('id', '=', dto.accountId)
-        .forUpdate()
-        .executeTakeFirst();
-
-      if (!account) {
-        throw new NotFoundError(`Account with ID '${dto.accountId}' was not found.`);
       }
 
       const currentBalance = BigInt(account.balance);
@@ -161,7 +161,19 @@ export class TransferService {
     dto: DebitDTO
   ): Promise<ServiceExecutionResult<SingleTransactionResponse>> {
     return await db.transaction().execute(async (trx) => {
-      // 1. Check idempotency replay
+      // 1. Lock account row FOR UPDATE first to serialize concurrent requests for this account
+      const account = await trx
+        .selectFrom('accounts')
+        .selectAll()
+        .where('id', '=', dto.accountId)
+        .forUpdate()
+        .executeTakeFirst();
+
+      if (!account) {
+        throw new NotFoundError(`Account with ID '${dto.accountId}' was not found.`);
+      }
+
+      // 2. Check idempotency replay inside locked account transaction
       const stored = await IdempotencyService.getStoredResponse(
         trx,
         dto.idempotencyKey,
@@ -173,18 +185,6 @@ export class TransferService {
           statusCode: stored.statusCode,
           data: stored.responseBody as SingleTransactionResponse,
         };
-      }
-
-      // 2. Lock account row FOR UPDATE
-      const account = await trx
-        .selectFrom('accounts')
-        .selectAll()
-        .where('id', '=', dto.accountId)
-        .forUpdate()
-        .executeTakeFirst();
-
-      if (!account) {
-        throw new NotFoundError(`Account with ID '${dto.accountId}' was not found.`);
       }
 
       const currentBalance = BigInt(account.balance);
@@ -263,21 +263,7 @@ export class TransferService {
     }
 
     return await db.transaction().execute(async (trx) => {
-      // 1. Check idempotency replay
-      const stored = await IdempotencyService.getStoredResponse(
-        trx,
-        dto.idempotencyKey,
-        dto.requestPath,
-        dto.requestBody
-      );
-      if (stored) {
-        return {
-          statusCode: stored.statusCode,
-          data: stored.responseBody as TransferResponse,
-        };
-      }
-
-      // 2. Deterministic Lock Ordering: Sort account IDs to prevent deadlocks under race conditions
+      // 1. Deterministic Lock Ordering: Sort account IDs to prevent deadlocks under race conditions
       const lockOrder = [dto.fromAccountId, dto.toAccountId].sort();
       const firstAccountId = lockOrder[0]!;
       const secondAccountId = lockOrder[1]!;
@@ -309,6 +295,20 @@ export class TransferService {
       }
       if (!toAccount) {
         throw new NotFoundError(`Recipient account '${dto.toAccountId}' was not found.`);
+      }
+
+      // 2. Check idempotency replay inside locked accounts transaction
+      const stored = await IdempotencyService.getStoredResponse(
+        trx,
+        dto.idempotencyKey,
+        dto.requestPath,
+        dto.requestBody
+      );
+      if (stored) {
+        return {
+          statusCode: stored.statusCode,
+          data: stored.responseBody as TransferResponse,
+        };
       }
 
       // 3. Currency mismatch check
