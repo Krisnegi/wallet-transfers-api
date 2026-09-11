@@ -92,6 +92,7 @@ export class TransferService {
       if (stored) {
         return {
           statusCode: stored.statusCode,
+          // Type Assertion: stored.responseBody is deserialized from JSONB saved during original execution
           data: stored.responseBody as SingleTransactionResponse,
         };
       }
@@ -183,6 +184,7 @@ export class TransferService {
       if (stored) {
         return {
           statusCode: stored.statusCode,
+          // Type Assertion: stored.responseBody is deserialized from JSONB saved during original execution
           data: stored.responseBody as SingleTransactionResponse,
         };
       }
@@ -307,6 +309,7 @@ export class TransferService {
       if (stored) {
         return {
           statusCode: stored.statusCode,
+          // Type Assertion: stored.responseBody is deserialized from JSONB saved during original execution
           data: stored.responseBody as TransferResponse,
         };
       }

@@ -1,5 +1,6 @@
 import { Kysely, sql } from 'kysely';
 
+// Kysely migration functions require Kysely<any> to execute DDL statements dynamically against un-instantiated DB schemas.
 export async function up(db: Kysely<any>): Promise<void> {
   // 1. Create accounts table
   await db.schema
