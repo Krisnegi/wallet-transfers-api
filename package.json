@@ -2,12 +2,14 @@
   "name": "wallet-transfers-api",
   "version": "1.0.0",
   "description": "Wallet & Transfers API for technical assessment",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "migrate": "tsx src/db/migrator.ts",
     "test": "vitest run"
   },
   "dependencies": {
