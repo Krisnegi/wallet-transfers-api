@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import { errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
   const app = express();
@@ -10,6 +11,9 @@ export function createApp(): Express {
   app.get('/', (_req, res) => {
     res.json({ message: 'Wallet & Transfers API' });
   });
+
+  // Global Error Handler Middleware
+  app.use(errorHandler);
 
   return app;
 }

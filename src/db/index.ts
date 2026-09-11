@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, Generated } from 'kysely';
 import pg from 'pg';
 import { config } from '../config.js';
 
@@ -7,23 +7,23 @@ import { config } from '../config.js';
 pg.types.setTypeParser(pg.types.builtins.INT8, (val: string) => val);
 
 export interface AccountsTable {
-  id: string;
+  id: Generated<string>;
   owner_name: string;
   currency: string;
-  balance: string; // Stored in minor units (e.g. integer 50000 = ₹500.00)
-  created_at: Date;
-  updated_at: Date;
+  balance: Generated<string>; // Stored in minor units (e.g. integer 50000 = ₹500.00)
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
 }
 
 export interface TransactionsTable {
-  id: string;
+  id: Generated<string>;
   account_id: string;
   type: 'CREDIT' | 'DEBIT';
   amount: string; // Minor units
   reference: string;
   counterparty_account_id: string | null;
   balance_after: string;
-  created_at: Date;
+  created_at: Generated<Date>;
 }
 
 export interface IdempotencyKeysTable {
@@ -32,7 +32,7 @@ export interface IdempotencyKeysTable {
   request_hash: string;
   status_code: number;
   response_body: unknown;
-  created_at: Date;
+  created_at: Generated<Date>;
 }
 
 export interface Database {
