@@ -1,6 +1,7 @@
 import express, { Express } from 'express';
 import { healthRouter } from './routes/healthRoutes.js';
 import { accountRouter } from './routes/accountRoutes.js';
+import { transferRouter } from './routes/transferRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export function createApp(): Express {
@@ -12,6 +13,7 @@ export function createApp(): Express {
   // Mount API routers
   app.use(healthRouter);
   app.use(accountRouter);
+  app.use(transferRouter);
 
   // Root endpoint
   app.get('/', (_req, res) => {
